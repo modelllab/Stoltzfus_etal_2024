@@ -4,8 +4,10 @@
 # Intro
 ###############################################################
 
-# Used to identify Cas9 ChIP peaks in SF370, SF370 ∆tracr-L, 5448, and NZ131 logarithmic and stationary phase BHI cultures
-# Sequencing: MiSeq, PE
+# Used to identify Cas9 ChIP peaks in Streptococcus pyogenes SF370, SF370 ∆tracr-L, 5448, and NZ131 logarithmic and stationary phase BHI cultures
+# Cas9 antibody: Cell Signaling Technology Cas9 (7A9-3A3) Mouse mAb #14697
+# Illumina libraries: NEBNext Ultra II DNA Library Prep Kit for Illumina 
+# Sequencing: MiSeq, v3, PE 2x75
 
 # Fasta and GFF3 files from following genbank references:
 	# 5448 = CP008776
@@ -19,13 +21,24 @@
 	# deeptools (3.5.0)
 	# macs2 (2.2.9.1)
 
+# Directory structure:
+	# raw_fqs/
+ 		# raw fastq files
+ 	# trimmed_fqs/
+ 	# peaks/
+  	# genomes/
+   		# fasta and gff3 files
+   	# bigwigs/
+    	# aligned/
+     	# Cas9_ChIP.sh
+
 # Run from command line as follows: $ Cas9_ChIP.sh $1 
 
 ###############################################################
 # Alignments
 ###############################################################
 
-# Index genomes
+# Index genomes. Run from genomes/
 if [ $1 == "index_fa" ]; then
 	for i in *.fa;
 	do
@@ -33,11 +46,19 @@ if [ $1 == "index_fa" ]; then
 	done
 fi
 
-# Trim reads (Q score cutoff = 30)
-# $ trim_galore -q 30 --paired --retain_unpaired <mate 1 fastq> <mate 2 fastq>
+# Trim reads (Q score cutoff = 30). Run from raw_fqs/
+if [ $1 == "trim" ]; then
+	for i in *R1.fq;
+	do
+	base=${i%%_R*}
+	trim_galore -q 30 --paired --retain_unpaired $1 $base_R2.fq;
+	done
+fi
 
-# Align reads to appropriate reference genome. Run from directory containing trimmed reads.
-# Align 5448 samples
+# Move trimmed fastq files to trimmed_fqs/
+
+# Align reads to appropriate reference genome. Run from directory containing trimmed reads. Run from trimmed_fqs/
+# Align 5448 samples:
 if [ $1 == "5448" ]; then
 	for i in 5448*R1.fq;
 	do
@@ -45,7 +66,8 @@ if [ $1 == "5448" ]; then
 	bwa mem ../genomes/5448_CP008776.fa $base_R1.fq $base_R2.fq > ../aligned/$base.sam;
 	done
 fi
-# Align NZ131 samples
+
+# Align NZ131 samples:
 if [ $1 == "NZ131" ]; then
 	for i in NZ131*R1.fq;
 	do
@@ -53,7 +75,8 @@ if [ $1 == "NZ131" ]; then
 	bwa mem ../genomes/NZ131_CP000829.fa $base_R1.fq $base_R2.fq > ../aligned/$base.sam;
 	done
 fi
-#Align SF370 and SF370 ∆tracr-L samples
+
+#Align SF370 and SF370 ∆tracr-L samples:
 if [ $1 == "SF370" ]; then
 	for i in SF370*R1.fq;
 	do
@@ -62,7 +85,7 @@ if [ $1 == "SF370" ]; then
 	done 
 fi
 
-# Convert to sams to bams, sort, and index
+# Convert sams to bams, sort, and index. Run from aligned/
 if [ $1 == "samtools" ]; then
 	for i in *.sam;
 	do
@@ -75,8 +98,7 @@ if [ $1 == "samtools" ]; then
 	done
 fi
 
-
-# Make BigWigs from bams for visualization on IGV. Normalized by counts per million in 20 bp bins.
+# Make BigWigs from bams for visualization on IGV. Normalized by counts per million in 20 bp bins. Run from aligned/
 if [ $1 == "bigwig_CPM" ]; then
 	for i in *.sorted.bam;
 	do
@@ -90,7 +112,7 @@ fi
 # Call Peaks
 ###############################################################
 
-# Call peaks with MACS2 (using 90% genome size for mappable genome)
+# Call peaks with MACS2 (using 90% genome size for mappable genome). Run from aligned/
 if [ $1 == "macs2" ]; then
 	macs2 callpeak -t 5448_log_ChIP.bam -c 5448_log_input.bam -g 1.667e6 -n 5448_log --outdir ../peaks -f BAMPE
 	macs2 callpeak -t 5448_stat_ChIP.bam -c 5448_stat_input.bam -g 1.667e6 -n 5448_stat --outdir ../peaks -f BAMPE

@@ -1,5 +1,5 @@
 # Determine fraction of G-5C mutant reads from all fastq files in a directory 
-# Note: "fq: files are not actually fqs. They're just the reads 
+# Note: "fq" files are not actually fqs. They only contain the sequence line from the original fastq files (one per line). 
 
 import glob
 
@@ -26,7 +26,7 @@ for fq in glob.glob("*.fastq"):
 	other_reads = 0
 	short = 0
 	
-	# Iterates through each line and counts number of mutant/WT reads in PAM
+	# Iterates through each line and counts number of mutant/WT reads in -5 position
 	file = open(fq)
 	for line in file:
 		#print(line)
